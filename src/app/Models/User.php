@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['email', 'password_hash', 'no_hp', 'tipe_akun', 'peran', 'status_verifikasi', 'status_akun', 'created_at'])]
+#[Hidden(['password_hash'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -32,8 +35,23 @@ class User extends Authenticatable
         ];
     }
 
-    public function getAuthPassword()
+    public function getAuthPassword(): string
     {
         return $this->password_hash;
+    }
+
+    public function getRememberTokenName(): string
+    {
+        return '';
+    }
+
+    public function personalProfile(): HasOne
+    {
+        return $this->hasOne(PersonalProfile::class, 'user_id', 'user_id');
+    }
+
+    public function businessProfile(): HasOne
+    {
+        return $this->hasOne(BusinessProfile::class, 'user_id', 'user_id');
     }
 }
