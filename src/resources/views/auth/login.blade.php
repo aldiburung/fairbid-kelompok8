@@ -13,10 +13,19 @@
                         <p class="text-secondary mb-0">Masuk ke akun FairBid Anda.</p>
                     </div>
 
-                    <form>
+                    @if ($errors->any())
+                        <div class="alert alert-danger" role="alert">
+                            @foreach ($errors->all() as $error)
+                                <div>{{ $error }}</div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <form action="{{ route('login.submit') }}" method="POST">
+                        @csrf
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" autocomplete="email" required>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ old('email') }}" autocomplete="email" required>
                         </div>
 
                         <div class="mb-2">
@@ -28,7 +37,7 @@
                             <a href="#" class="text-fairbid text-decoration-none">Lupa kata sandi?</a>
                         </div>
 
-                        <button type="button" class="btn btn-fairbid w-100 fw-semibold">MASUK</button>
+                        <button type="submit" class="btn btn-fairbid w-100 fw-semibold">MASUK</button>
                     </form>
 
                     <p class="text-center text-secondary mt-4 mb-0">

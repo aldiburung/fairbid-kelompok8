@@ -76,14 +76,36 @@
                 <div class="navbar-nav ms-auto align-items-lg-center gap-lg-2 pt-3 pt-lg-0">
                     <a class="nav-link" href="{{ url('/') }}">Beranda</a>
                     <a class="nav-link" href="{{ url('/#lelang') }}">Katalog</a>
-                    <a class="nav-link" href="{{ route('login') }}">Masuk</a>
-                    <a class="btn btn-orange fw-semibold px-4 ms-lg-2" href="{{ route('register') }}">Daftar</a>
+                    @auth
+                        @php
+                            $user = auth()->user();
+                            $userName = $user->tipe_akun === 'PERSONAL'
+                                ? $user->personalProfile?->nama_lengkap
+                                : $user->businessProfile?->nama_usaha;
+                        @endphp
+                        <span class="navbar-text text-white">{{ $userName ?: $user->email }}</span>
+                        <form action="{{ route('logout') }}" method="POST" class="ms-lg-2">
+                            @csrf
+                            <button type="submit" class="btn btn-outline-light">Keluar</button>
+                        </form>
+                    @else
+                        <a class="nav-link" href="{{ route('login') }}">Masuk</a>
+                        <a class="btn btn-orange fw-semibold px-4 ms-lg-2" href="{{ route('register') }}">Daftar</a>
+                    @endauth
                 </div>
             </div>
         </div>
     </nav>
 
     <main>
+        @if (session('success'))
+            <div class="container pt-4">
+                <div class="alert alert-success alert-dismissible fade show mb-0" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+                </div>
+            </div>
+        @endif
         @yield('content')
     </main>
 
