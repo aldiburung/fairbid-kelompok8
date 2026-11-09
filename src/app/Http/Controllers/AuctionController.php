@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Auction;
 use App\Models\Category;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -16,6 +17,88 @@ use Throwable;
 
 class AuctionController extends Controller
 {
+    public function index(Request $request): View
+    {
+        $allowedStatuses = ['AKTIF', 'TERJADWAL'];
+        $query = Auction::query()
+            ->with(['auctionMedia' => function ($mediaQuery) {
+                $mediaQuery->where('tipe', 'FOTO')->orderBy('urutan')->orderBy('media_id');
+            }])
+            ->whereIn('status', $allowedStatuses);
+
+        if ($request->filled('q')) {
+            $query->where('judul', 'like', '%' . $request->query('q') . '%');
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->query('category_id'));
+        }
+
+        if ($request->filled('model_transaksi')) {
+            $query->where('model_transaksi', $request->query('model_transaksi'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->query('status'));
+        }
+
+        return view('auctions.index', [
+            'auctions' => $query->orderBy('end_time')->paginate(9)->withQueryString(),
+            'categories' => Category::orderBy('nama_kategori')->get(),
+        ]);
+    }
+
+    public function show(Request $request, Auction $auction): View
+    {
+        $auction->load([
+            'auctionMedia' => function ($mediaQuery) {
+                $mediaQuery->where('tipe', 'FOTO')->orderBy('urutan')->orderBy('media_id');
+            },
+            'seller.personalProfile',
+            'seller.businessProfile',
+        ]);
+
+        $isSeller = (string) $request->user()?->user_id === (string) $auction->seller_id;
+        abort_unless(
+            in_array($auction->status, ['AKTIF', 'TERJADWAL'], true) || $isSeller,
+            404,
+        );
+
+        $seller = $auction->seller;
+        $sellerName = $seller->tipe_akun === 'PERSONAL'
+            ? $seller->personalProfile?->nama_lengkap
+            : $seller->businessProfile?->nama_usaha;
+
+        if (! $sellerName) {
+            [$emailName, $emailDomain] = array_pad(explode('@', $seller->email, 2), 2, '');
+            $sellerName = ($emailName !== '' ? mb_substr($emailName, 0, 1) . str_repeat('*', max(1, mb_strlen($emailName) - 1)) : '***')
+                . ($emailDomain !== '' ? '@' . $emailDomain : '');
+        }
+
+        return view('auctions.show', [
+            'auction' => $auction,
+            'sellerName' => $sellerName,
+            'isSeller' => $isSeller,
+            'initialSeconds' => max(0, (int) now()->diffInSeconds($auction->end_time, false)),
+        ]);
+    }
+
+    public function state(Request $request, Auction $auction): JsonResponse
+    {
+        $isSeller = (string) $request->user()?->user_id === (string) $auction->seller_id;
+        abort_unless(in_array($auction->status, ['AKTIF', 'TERJADWAL'], true) || $isSeller, 404);
+
+        $now = now();
+
+        return response()->json([
+            'end_time' => $auction->end_time->toIso8601String(),
+            'status' => $auction->status,
+            // Harga tertinggi akan diambil dari tabel bid pada tahap berikutnya.
+            'harga_tertinggi' => (float) $auction->harga_awal,
+            'sisa_detik' => max(0, (int) $now->diffInSeconds($auction->end_time, false)),
+        ]);
+    }
+
     public function create(): View
     {
         return view('auctions.create', [
@@ -135,7 +218,7 @@ class AuctionController extends Controller
             throw $exception;
         }
 
-        return redirect()->route('home')->with(
+        return redirect()->route('auctions.show', $auction)->with(
             'success',
             $validated['aksi'] === 'draft'
                 ? 'Draf lelang tersimpan.'

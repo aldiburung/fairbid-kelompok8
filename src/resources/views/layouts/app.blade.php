@@ -75,7 +75,7 @@
             <div class="collapse navbar-collapse" id="mainNavbar">
                 <div class="navbar-nav ms-auto align-items-lg-center gap-lg-2 pt-3 pt-lg-0">
                     <a class="nav-link" href="{{ url('/') }}">Beranda</a>
-                    <a class="nav-link" href="{{ url('/#lelang') }}">Katalog</a>
+                    <a class="nav-link" href="{{ route('auctions.index') }}">Katalog</a>
                     @auth
                         @php
                             $user = auth()->user();
