@@ -2,9 +2,20 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuctionController;
+use App\Models\Auction;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'beranda')->name('home');
+Route::get('/', function () {
+    $auctions = Auction::with(['auctionMedia' => function ($query) {
+        $query->where('tipe', 'FOTO')->orderBy('urutan')->orderBy('media_id');
+    }])
+        ->where('status', 'AKTIF')
+        ->orderByDesc('created_at')
+        ->limit(6)
+        ->get();
+
+    return view('beranda', compact('auctions'));
+})->name('home');
 
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -22,3 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
     Route::post('/auctions', [AuctionController::class, 'store'])->name('auctions.store');
 });
+
+Route::get('/auctions', [AuctionController::class, 'index'])->name('auctions.index');
+Route::get('/auctions/{auction}/state', [AuctionController::class, 'state'])->name('auctions.state');
+Route::get('/auctions/{auction}', [AuctionController::class, 'show'])->name('auctions.show');

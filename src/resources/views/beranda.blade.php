@@ -33,42 +33,42 @@
                 <span class="text-uppercase small fw-bold text-fairbid">Pilih barang favoritmu</span>
                 <h2 class="h2 text-fairbid fw-bold mb-0 mt-1">Lelang Sedang Berlangsung</h2>
             </div>
-            <span class="text-secondary">6 lelang pilihan</span>
+            <a href="{{ route('auctions.index') }}" class="text-fairbid fw-semibold text-decoration-none">Lihat katalog</a>
         </div>
 
         <div class="row g-4">
-            @php
-                $auctions = [
-                    ['title' => 'Kamera Mirrorless', 'price' => 'Rp 4.250.000', 'time' => '02:18:45', 'type' => 'C2C', 'tone' => 'linear-gradient(135deg, #dce5ef, #a9bacd)'],
-                    ['title' => 'Sepeda Lipat Premium', 'price' => 'Rp 2.800.000', 'time' => '05:42:10', 'type' => 'C2B', 'tone' => 'linear-gradient(135deg, #e8dfd3, #c4b39e)'],
-                    ['title' => 'Jam Tangan Klasik', 'price' => 'Rp 1.650.000', 'time' => '01:09:32', 'type' => 'C2C', 'tone' => 'linear-gradient(135deg, #e7e1d7, #b9aa96)'],
-                    ['title' => 'Laptop Ultrabook', 'price' => 'Rp 7.100.000', 'time' => '10:26:08', 'type' => 'C2B', 'tone' => 'linear-gradient(135deg, #d9e3eb, #9fb3c5)'],
-                    ['title' => 'Kursi Kerja Ergonomis', 'price' => 'Rp 950.000', 'time' => '03:55:21', 'type' => 'C2C', 'tone' => 'linear-gradient(135deg, #e0e5df, #aeb9aa)'],
-                    ['title' => 'Headphone Nirkabel', 'price' => 'Rp 780.000', 'time' => '07:14:56', 'type' => 'C2B', 'tone' => 'linear-gradient(135deg, #e3deea, #b2a7c3)'],
-                ];
-            @endphp
-
-            @foreach ($auctions as $auction)
+            @forelse ($auctions as $auction)
+                @php
+                    $firstPhoto = $auction->auctionMedia->first();
+                @endphp
                 <div class="col-sm-6 col-lg-4">
                     <article class="card fairbid-card h-100">
-                        <div class="auction-placeholder d-flex align-items-center justify-content-center" style="height: 190px; background: {{ $auction['tone'] }};">
-                            <span class="text-white fw-bold small text-uppercase" style="letter-spacing: .16em; text-shadow: 0 1px 5px rgba(0,0,0,.25);">Foto Barang</span>
-                        </div>
+                        @if ($firstPhoto)
+                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($firstPhoto->url) }}" class="card-img-top" alt="{{ $auction->judul }}" style="height: 190px; object-fit: cover;">
+                        @else
+                            <div class="d-flex align-items-center justify-content-center bg-light text-secondary" style="height: 190px;">Foto belum tersedia</div>
+                        @endif
                         <div class="card-body d-flex flex-column p-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="badge rounded-pill {{ $auction['type'] === 'C2C' ? 'text-bg-primary' : 'text-bg-warning' }}">{{ $auction['type'] }}</span>
-                                <span class="small text-secondary">Berakhir dalam {{ $auction['time'] }}</span>
+                                <span class="badge rounded-pill {{ $auction->model_transaksi === 'C2C' ? 'text-bg-primary' : 'text-bg-warning' }}">{{ $auction->model_transaksi }}</span>
+                                <span class="small text-secondary">Berakhir {{ $auction->end_time->diffForHumans() }}</span>
                             </div>
-                            <h3 class="h5 fw-bold text-fairbid">{{ $auction['title'] }}</h3>
+                            <h3 class="h5 fw-bold text-fairbid">{{ $auction->judul }}</h3>
                             <div class="mt-auto">
-                                <div class="small text-secondary">Harga tertinggi</div>
-                                <div class="fs-5 fw-bold mb-3">{{ $auction['price'] }}</div>
-                                <a href="{{ route('login') }}" class="btn btn-outline-primary w-100 fw-semibold">Lihat</a>
+                                <div class="small text-secondary">Harga saat ini</div>
+                                <div class="fs-5 fw-bold mb-3">Rp{{ number_format((float) $auction->harga_awal, 0, ',', '.') }}</div>
+                                <a href="{{ route('auctions.show', $auction) }}" class="btn btn-outline-primary w-100 fw-semibold">Lihat</a>
                             </div>
                         </div>
                     </article>
                 </div>
-            @endforeach
+            @empty
+                <div class="col-12">
+                    <div class="alert alert-info mb-0" role="status">
+                        Belum ada lelang aktif. Jadilah yang pertama menawarkan barang di FairBid.
+                    </div>
+                </div>
+            @endforelse
         </div>
     </div>
 </section>
