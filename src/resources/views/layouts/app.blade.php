@@ -83,6 +83,7 @@
                                 ? $user->personalProfile?->nama_lengkap
                                 : $user->businessProfile?->nama_usaha;
                         @endphp
+                        <a class="nav-link" href="{{ route('auctions.create') }}">Jual</a>
                         <span class="navbar-text text-white">{{ $userName ?: $user->email }}</span>
                         <form action="{{ route('logout') }}" method="POST" class="ms-lg-2">
                             @csrf

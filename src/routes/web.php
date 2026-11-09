@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AuctionController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'beranda')->name('home');
@@ -16,3 +17,8 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
+    Route::post('/auctions', [AuctionController::class, 'store'])->name('auctions.store');
+});
