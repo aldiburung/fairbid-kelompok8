@@ -76,7 +76,7 @@
                             </div>
                             <h2 class="h5 fw-bold text-fairbid">{{ $auction->judul }}</h2>
                             <div class="small text-secondary mb-1">Harga saat ini</div>
-                            <div class="fs-5 fw-bold mb-3">Rp{{ number_format((float) $auction->harga_awal, 0, ',', '.') }}</div>
+                            <div class="fs-5 fw-bold mb-3">Rp{{ number_format((float) ($auction->harga_tertinggi ?? $auction->harga_awal), 0, ',', '.') }}</div>
                             <div class="small text-secondary mb-3">
                                 Sisa waktu: <span data-countdown data-end-time="{{ $auction->end_time->toIso8601String() }}">Menghitung...</span>
                             </div>
