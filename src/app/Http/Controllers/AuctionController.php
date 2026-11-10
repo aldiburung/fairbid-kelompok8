@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Auction;
 use App\Models\AuctionDeposit;
+use App\Models\Bid;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +26,9 @@ class AuctionController extends Controller
             ->with(['auctionMedia' => function ($mediaQuery) {
                 $mediaQuery->where('tipe', 'FOTO')->orderBy('urutan')->orderBy('media_id');
             }])
+            ->withMax(['bids as harga_tertinggi' => function ($bidQuery) {
+                $bidQuery->where('status', 'VALID');
+            }], 'amount')
             ->whereIn('status', $allowedStatuses);
 
         if ($request->filled('q')) {
@@ -58,6 +62,7 @@ class AuctionController extends Controller
             'seller.personalProfile',
             'seller.businessProfile',
         ]);
+        $highestBid = $this->highestValidBid($auction);
 
         $isSeller = (string) $request->user()?->user_id === (string) $auction->seller_id;
         abort_unless(
@@ -80,6 +85,15 @@ class AuctionController extends Controller
             'auction' => $auction,
             'sellerName' => $sellerName,
             'isSeller' => $isSeller,
+            'hargaTertinggi' => $highestBid?->amount ?? $auction->harga_awal,
+            'nominalMinimum' => $highestBid
+                ? round((float) $highestBid->amount + (float) $auction->kelipatan_bid, 2)
+                : $auction->harga_awal,
+            'bidHistory' => $this->recentValidBids($auction),
+            'hasExtendedBid' => $auction->bids()
+                ->where('status', 'VALID')
+                ->where('extended_auction', true)
+                ->exists(),
             'userDeposit' => $request->user()
                 ? AuctionDeposit::query()
                     ->where('auction_id', $auction->auction_id)
@@ -96,14 +110,56 @@ class AuctionController extends Controller
         abort_unless(in_array($auction->status, ['AKTIF', 'TERJADWAL'], true) || $isSeller, 404);
 
         $now = now();
+        $highestBid = $this->highestValidBid($auction);
+        $minimumAmount = $highestBid
+            ? round((float) $highestBid->amount + (float) $auction->kelipatan_bid, 2)
+            : (float) $auction->harga_awal;
 
         return response()->json([
             'end_time' => $auction->end_time->toIso8601String(),
             'status' => $auction->status,
-            // Harga tertinggi akan diambil dari tabel bid pada tahap berikutnya.
-            'harga_tertinggi' => (float) $auction->harga_awal,
+            'harga_tertinggi' => (float) ($highestBid?->amount ?? $auction->harga_awal),
+            'nominal_minimum' => $minimumAmount,
+            'jumlah_bid' => $auction->bids()->where('status', 'VALID')->count(),
             'sisa_detik' => max(0, (int) $now->diffInSeconds($auction->end_time, false)),
+            'riwayat' => $this->recentValidBids($auction),
+            'has_extended_bid' => $auction->bids()
+                ->where('status', 'VALID')
+                ->where('extended_auction', true)
+                ->exists(),
         ]);
+    }
+
+    private function highestValidBid(Auction $auction): ?Bid
+    {
+        return $auction->bids()
+            ->where('status', 'VALID')
+            ->orderByDesc('amount')
+            ->first();
+    }
+
+    /**
+     * @return array<int, array{sequence_no: int, amount: float, server_timestamp: string, penawar: string, extended_auction: bool}>
+     */
+    private function recentValidBids(Auction $auction): array
+    {
+        return $auction->bids()
+            ->where('status', 'VALID')
+            ->orderByDesc('sequence_no')
+            ->limit(10)
+            ->get()
+            ->map(static function (Bid $bid): array {
+                $bidderSuffix = str_pad(substr((string) $bid->bidder_id, -2), 2, '0', STR_PAD_LEFT);
+
+                return [
+                    'sequence_no' => (int) $bid->sequence_no,
+                    'amount' => (float) $bid->amount,
+                    'server_timestamp' => $bid->server_timestamp->format('Y-m-d\TH:i:s.uP'),
+                    'penawar' => 'Peserta ***' . $bidderSuffix,
+                    'extended_auction' => (bool) $bid->extended_auction,
+                ];
+            })
+            ->all();
     }
 
     public function create(): View

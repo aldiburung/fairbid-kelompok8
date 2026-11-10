@@ -49,7 +49,11 @@
                         </div>
                         <div class="col-6">
                             <div class="small text-secondary">Harga saat ini</div>
-                            <div class="fw-bold text-fairbid" id="harga-tertinggi" data-value="{{ (float) $auction->harga_awal }}">Rp{{ number_format((float) $auction->harga_awal, 0, ',', '.') }}</div>
+                            <div class="fw-bold text-fairbid" id="harga-tertinggi">Rp{{ number_format((float) $hargaTertinggi, 0, ',', '.') }}</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="small text-secondary">Nominal minimum</div>
+                            <div class="fw-semibold" id="nominal-minimum">Rp{{ number_format((float) $nominalMinimum, 0, ',', '.') }}</div>
                         </div>
                     </div>
 
@@ -63,38 +67,60 @@
                             {{ $errors->first('auction') ?: $errors->first('status_verifikasi') }}
                         </div>
                     @endif
+                    @if (session('success'))
+                        <div class="alert alert-success py-2">{{ session('success') }}</div>
+                    @endif
 
                     @if ($isSeller)
-                        <button type="button" class="btn btn-outline-secondary w-100 mb-4" disabled>Ini lelang Anda</button>
+                        <div class="alert alert-secondary mb-4">Anda adalah penjual dan tidak dapat menawar lelang ini.</div>
                     @elseif (auth()->guest())
-                        <a href="{{ route('login') }}" class="btn btn-orange w-100 fw-semibold mb-4">Masuk untuk Ikut Lelang</a>
+                        <div class="alert alert-info mb-2">Silakan masuk untuk menawar lelang ini.</div>
+                        <a href="{{ route('login') }}" class="btn btn-orange w-100 fw-semibold mb-4">Masuk</a>
                     @elseif ($userDeposit?->status === 'DITAHAN')
-                        <div class="mb-4">
-                            <span class="badge text-bg-success px-3 py-2">UJL ditahan, siap menawar</span>
-                        </div>
-                    @elseif ($userDeposit?->status === 'MENUNGGU')
-                        <a href="{{ route('deposits.pay', $userDeposit) }}" class="btn btn-orange w-100 fw-semibold mb-4">Lanjutkan pembayaran</a>
-                    @else
-                        <form action="{{ route('deposits.join', $auction) }}" method="POST" class="mb-4">
+                        <form action="{{ route('bids.store', $auction) }}" method="POST" class="mb-4">
                             @csrf
-                            <div class="form-check mb-3">
-                                <input
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    name="terms_accepted"
-                                    id="terms_accepted"
-                                    value="1"
-                                    required
-                                >
-                                <label class="form-check-label small" for="terms_accepted">
-                                    Saya menyetujui syarat lelang dan memahami UJL yang harus dibayarkan.
-                                </label>
-                            </div>
-                            @error('terms_accepted')
-                                <div class="text-danger small mb-2">{{ $message }}</div>
+                            <label for="amount" class="form-label fw-semibold">Nominal penawaran</label>
+                            <input
+                                type="number"
+                                class="form-control @error('amount') is-invalid @enderror"
+                                id="amount"
+                                name="amount"
+                                value="{{ old('amount', number_format((float) $nominalMinimum, 2, '.', '')) }}"
+                                min="{{ number_format((float) $nominalMinimum, 2, '.', '') }}"
+                                step="0.01"
+                                required
+                            >
+                            @error('amount')
+                                <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <button type="submit" class="btn btn-orange w-100 fw-semibold">Ikut Lelang</button>
+                            <button type="submit" class="btn btn-orange w-100 fw-semibold mt-3">TAWAR</button>
                         </form>
+                    @else
+                        <div class="alert alert-warning mb-2">UJL Anda belum dibayar.</div>
+                        @if ($userDeposit)
+                            <a href="{{ route('deposits.pay', $userDeposit) }}" class="btn btn-orange w-100 fw-semibold mb-4">Bayar UJL</a>
+                        @else
+                            <form action="{{ route('deposits.join', $auction) }}" method="POST" class="mb-4">
+                                @csrf
+                                <div class="form-check mb-3">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="terms_accepted"
+                                        id="terms_accepted"
+                                        value="1"
+                                        required
+                                    >
+                                    <label class="form-check-label small" for="terms_accepted">
+                                        Saya menyetujui syarat lelang dan memahami UJL yang harus dibayarkan.
+                                    </label>
+                                </div>
+                                @error('terms_accepted')
+                                    <div class="text-danger small mb-2">{{ $message }}</div>
+                                @enderror
+                                <button type="submit" class="btn btn-orange w-100 fw-semibold">Ikut lelang dan bayar UJL</button>
+                            </form>
+                        @endif
                     @endif
 
                     <h2 class="h5 fw-bold text-fairbid">Deskripsi</h2>
@@ -104,8 +130,35 @@
 
             <article class="card fairbid-card mt-4">
                 <div class="card-body p-4">
-                    <h2 class="h5 fw-bold text-fairbid mb-3">Riwayat penawaran</h2>
-                    <p class="text-secondary mb-0">Belum ada penawaran.</p>
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                        <h2 class="h5 fw-bold text-fairbid mb-0">Riwayat penawaran</h2>
+                        <span class="badge text-bg-warning {{ $hasExtendedBid ? '' : 'd-none' }}" id="extended-bid-badge">Waktu diperpanjang</span>
+                    </div>
+                    <div class="small text-secondary mb-2">Jumlah penawaran: <span id="jumlah-bid">{{ count($bidHistory) }}</span></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Urutan</th>
+                                    <th>Nominal</th>
+                                    <th>Waktu</th>
+                                    <th>Penawar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bid-history">
+                                @forelse ($bidHistory as $bid)
+                                    <tr>
+                                        <td>{{ $bid['sequence_no'] }}</td>
+                                        <td>{{ 'Rp' . number_format($bid['amount'], 0, ',', '.') }}</td>
+                                        <td>{{ \Illuminate\Support\Carbon::parse($bid['server_timestamp'])->format('d/m/Y H:i:s') }}</td>
+                                        <td>{{ $bid['penawar'] }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="4" class="text-secondary">Belum ada penawaran.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </article>
         </div>
@@ -114,6 +167,11 @@
 <script>
     const countdown = document.getElementById('auction-countdown');
     const price = document.getElementById('harga-tertinggi');
+    const minimum = document.getElementById('nominal-minimum');
+    const bidInput = document.getElementById('amount');
+    const bidCount = document.getElementById('jumlah-bid');
+    const bidHistory = document.getElementById('bid-history');
+    const extendedBidBadge = document.getElementById('extended-bid-badge');
     const formatCurrency = new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
@@ -148,10 +206,50 @@
             const state = await response.json();
             remainingSeconds = Math.max(0, Number(state.sisa_detik));
             price.textContent = formatCurrency.format(Number(state.harga_tertinggi));
+            minimum.textContent = formatCurrency.format(Number(state.nominal_minimum));
+            bidCount.textContent = String(state.jumlah_bid);
+            extendedBidBadge.classList.toggle('d-none', !state.has_extended_bid);
+            if (bidInput) {
+                const nextMinimum = Number(state.nominal_minimum).toFixed(2);
+                bidInput.min = nextMinimum;
+                if (document.activeElement !== bidInput) {
+                    bidInput.value = nextMinimum;
+                }
+            }
+            renderBidHistory(state.riwayat);
             renderCountdown();
         } catch (error) {
             console.error('Gagal memperbarui status lelang:', error);
         }
+    }
+
+    function renderBidHistory(entries) {
+        bidHistory.replaceChildren();
+        if (entries.length === 0) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = 4;
+            cell.className = 'text-secondary';
+            cell.textContent = 'Belum ada penawaran.';
+            row.appendChild(cell);
+            bidHistory.appendChild(row);
+            return;
+        }
+
+        entries.forEach((bid) => {
+            const row = document.createElement('tr');
+            [
+                bid.sequence_no,
+                formatCurrency.format(Number(bid.amount)),
+                new Date(bid.server_timestamp).toLocaleString('id-ID'),
+                bid.penawar,
+            ].forEach((value) => {
+                const cell = document.createElement('td');
+                cell.textContent = String(value);
+                row.appendChild(cell);
+            });
+            bidHistory.appendChild(row);
+        });
     }
 
     renderCountdown();
@@ -159,6 +257,6 @@
         remainingSeconds = Math.max(0, remainingSeconds - 1);
         renderCountdown();
     }, 1000);
-    window.setInterval(refreshAuctionState, 5000);
+    window.setInterval(refreshAuctionState, 3000);
 </script>
 @endsection

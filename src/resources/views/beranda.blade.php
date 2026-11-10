@@ -56,7 +56,7 @@
                             <h3 class="h5 fw-bold text-fairbid">{{ $auction->judul }}</h3>
                             <div class="mt-auto">
                                 <div class="small text-secondary">Harga saat ini</div>
-                                <div class="fs-5 fw-bold mb-3">Rp{{ number_format((float) $auction->harga_awal, 0, ',', '.') }}</div>
+                                <div class="fs-5 fw-bold mb-3">Rp{{ number_format((float) ($auction->harga_tertinggi ?? $auction->harga_awal), 0, ',', '.') }}</div>
                                 <a href="{{ route('auctions.show', $auction) }}" class="btn btn-outline-primary w-100 fw-semibold">Lihat</a>
                             </div>
                         </div>

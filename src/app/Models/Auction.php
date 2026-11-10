@@ -61,4 +61,14 @@ class Auction extends Model
     {
         return $this->hasMany(AuctionDeposit::class, 'auction_id', 'auction_id');
     }
+
+    public function bids(): HasMany
+    {
+        return $this->hasMany(Bid::class, 'auction_id', 'auction_id');
+    }
+
+    public function winningBid(): BelongsTo
+    {
+        return $this->belongsTo(Bid::class, 'winning_bid_id', 'bid_id');
+    }
 }
