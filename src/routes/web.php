@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuctionController;
+use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\DepositController;
 use App\Models\Auction;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/deposits/{deposit}/bayar', [DepositController::class, 'pay'])->name('deposits.pay');
     Route::post('/sandbox/payments/{payment}/simulasi', [DepositController::class, 'simulasi'])
         ->name('sandbox.payments.simulasi');
+});
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/verifikasi', [AdminVerificationController::class, 'index'])
+        ->name('verifikasi.index');
+    Route::post('/verifikasi/{verification}/setujui', [AdminVerificationController::class, 'approve'])
+        ->name('verifikasi.approve');
+    Route::post('/verifikasi/{verification}/tolak', [AdminVerificationController::class, 'reject'])
+        ->name('verifikasi.reject');
 });
 
 Route::get('/auctions', [AuctionController::class, 'index'])->name('auctions.index');
