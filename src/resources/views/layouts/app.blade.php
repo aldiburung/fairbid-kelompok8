@@ -84,6 +84,9 @@
                                 : $user->businessProfile?->nama_usaha;
                         @endphp
                         <a class="nav-link" href="{{ route('auctions.create') }}">Jual</a>
+                        @if ($user->peran === 'ADMIN')
+                            <a class="nav-link" href="{{ route('admin.verifikasi.index') }}">Admin</a>
+                        @endif
                         <span class="navbar-text text-white">{{ $userName ?: $user->email }}</span>
                         <form action="{{ route('logout') }}" method="POST" class="ms-lg-2">
                             @csrf
