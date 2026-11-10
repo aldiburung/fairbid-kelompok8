@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Auction;
+use App\Models\AuctionDeposit;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -79,6 +80,12 @@ class AuctionController extends Controller
             'auction' => $auction,
             'sellerName' => $sellerName,
             'isSeller' => $isSeller,
+            'userDeposit' => $request->user()
+                ? AuctionDeposit::query()
+                    ->where('auction_id', $auction->auction_id)
+                    ->where('user_id', $request->user()->user_id)
+                    ->first()
+                : null,
             'initialSeconds' => max(0, (int) now()->diffInSeconds($auction->end_time, false)),
         ]);
     }

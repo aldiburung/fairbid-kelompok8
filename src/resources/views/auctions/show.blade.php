@@ -58,12 +58,43 @@
                         <span id="auction-countdown" data-seconds="{{ $initialSeconds }}">{{ $initialSeconds }} detik</span>
                     </div>
 
+                    @if ($errors->has('auction') || $errors->has('status_verifikasi'))
+                        <div class="alert alert-danger py-2">
+                            {{ $errors->first('auction') ?: $errors->first('status_verifikasi') }}
+                        </div>
+                    @endif
+
                     @if ($isSeller)
                         <button type="button" class="btn btn-outline-secondary w-100 mb-4" disabled>Ini lelang Anda</button>
                     @elseif (auth()->guest())
-                        <button type="button" class="btn btn-orange w-100 fw-semibold mb-4" disabled>Ikut Lelang</button>
+                        <a href="{{ route('login') }}" class="btn btn-orange w-100 fw-semibold mb-4">Masuk untuk Ikut Lelang</a>
+                    @elseif ($userDeposit?->status === 'DITAHAN')
+                        <div class="mb-4">
+                            <span class="badge text-bg-success px-3 py-2">UJL ditahan, siap menawar</span>
+                        </div>
+                    @elseif ($userDeposit?->status === 'MENUNGGU')
+                        <a href="{{ route('deposits.pay', $userDeposit) }}" class="btn btn-orange w-100 fw-semibold mb-4">Lanjutkan pembayaran</a>
                     @else
-                        <button type="button" class="btn btn-orange w-100 fw-semibold mb-4">Ikut Lelang</button>
+                        <form action="{{ route('deposits.join', $auction) }}" method="POST" class="mb-4">
+                            @csrf
+                            <div class="form-check mb-3">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    name="terms_accepted"
+                                    id="terms_accepted"
+                                    value="1"
+                                    required
+                                >
+                                <label class="form-check-label small" for="terms_accepted">
+                                    Saya menyetujui syarat lelang dan memahami UJL yang harus dibayarkan.
+                                </label>
+                            </div>
+                            @error('terms_accepted')
+                                <div class="text-danger small mb-2">{{ $message }}</div>
+                            @enderror
+                            <button type="submit" class="btn btn-orange w-100 fw-semibold">Ikut Lelang</button>
+                        </form>
                     @endif
 
                     <h2 class="h5 fw-bold text-fairbid">Deskripsi</h2>

@@ -56,4 +56,9 @@ class Auction extends Model
     {
         return $this->hasMany(AuctionMedia::class, 'auction_id', 'auction_id');
     }
+
+    public function auctionDeposits(): HasMany
+    {
+        return $this->hasMany(AuctionDeposit::class, 'auction_id', 'auction_id');
+    }
 }
