@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuctionController;
+use App\Http\Controllers\DepositController;
 use App\Models\Auction;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,10 @@ Route::post('/logout', [AuthController::class, 'logout'])
 Route::middleware('auth')->group(function () {
     Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
     Route::post('/auctions', [AuctionController::class, 'store'])->name('auctions.store');
+    Route::post('/auctions/{auction}/join', [DepositController::class, 'join'])->name('deposits.join');
+    Route::get('/deposits/{deposit}/bayar', [DepositController::class, 'pay'])->name('deposits.pay');
+    Route::post('/sandbox/payments/{payment}/simulasi', [DepositController::class, 'simulasi'])
+        ->name('sandbox.payments.simulasi');
 });
 
 Route::get('/auctions', [AuctionController::class, 'index'])->name('auctions.index');
