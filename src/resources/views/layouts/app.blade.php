@@ -84,6 +84,7 @@
                                 : $user->businessProfile?->nama_usaha;
                         @endphp
                         <a class="nav-link" href="{{ route('auctions.create') }}">Jual</a>
+                        <a class="nav-link" href="{{ route('transactions.index') }}">Transaksi</a>
                         @if ($user->peran === 'ADMIN')
                             <a class="nav-link" href="{{ route('admin.verifikasi.index') }}">Admin</a>
                         @endif

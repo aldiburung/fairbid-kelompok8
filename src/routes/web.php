@@ -5,6 +5,7 @@ use App\Http\Controllers\AuctionController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\BidController;
 use App\Http\Controllers\DepositController;
+use App\Http\Controllers\TransactionController;
 use App\Models\Auction;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +44,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/deposits/{deposit}/bayar', [DepositController::class, 'pay'])->name('deposits.pay');
     Route::post('/sandbox/payments/{payment}/simulasi', [DepositController::class, 'simulasi'])
         ->name('sandbox.payments.simulasi');
+    Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
+    Route::get('/transactions/{transaction}', [TransactionController::class, 'show'])->name('transactions.show');
+    Route::post('/transactions/{transaction}/bayar', [TransactionController::class, 'pay'])->name('transactions.pay');
+    Route::post('/sandbox/transactions/{transaction}/simulasi', [TransactionController::class, 'simulasi'])
+        ->name('sandbox.transactions.simulasi');
+    Route::post('/transactions/{transaction}/serah-terima', [TransactionController::class, 'confirmHandover'])
+        ->name('transactions.handover');
+    Route::post('/transactions/{transaction}/diterima', [TransactionController::class, 'confirmReceived'])
+        ->name('transactions.received');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

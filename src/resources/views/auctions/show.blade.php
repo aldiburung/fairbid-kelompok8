@@ -34,6 +34,17 @@
                     <h1 class="h2 fw-bold text-fairbid mb-3">{{ $auction->judul }}</h1>
                     <p class="text-secondary mb-4">Penjual: <span class="fw-semibold text-dark">{{ $sellerName }}</span></p>
 
+                    @if ($auction->status === 'SELESAI')
+                        <div class="alert alert-success">
+                            Lelang berakhir. Harga akhir Rp{{ number_format((float) $auction->winningBid?->amount, 0, ',', '.') }}.
+                            @if (($isWinner || $isSeller) && $auctionTransaction)
+                                <a href="{{ route('transactions.show', $auctionTransaction) }}" class="alert-link">Lihat transaksi</a>
+                            @endif
+                        </div>
+                    @elseif ($auction->status === 'TANPA_PEMENANG')
+                        <div class="alert alert-secondary">Lelang berakhir tanpa pemenang.</div>
+                    @endif
+
                     <div class="row g-3 mb-4">
                         <div class="col-6">
                             <div class="small text-secondary">Harga awal</div>
@@ -71,7 +82,11 @@
                         <div class="alert alert-success py-2">{{ session('success') }}</div>
                     @endif
 
-                    @if ($isSeller)
+                    @if (in_array($auction->status, ['SELESAI', 'TANPA_PEMENANG'], true))
+                        @if ($isSeller && $auction->status === 'TANPA_PEMENANG')
+                            <a href="{{ route('auctions.index') }}" class="btn btn-outline-secondary w-100 mb-4">Kembali ke katalog</a>
+                        @endif
+                    @elseif ($isSeller)
                         <div class="alert alert-secondary mb-4">Anda adalah penjual dan tidak dapat menawar lelang ini.</div>
                     @elseif (auth()->guest())
                         <div class="alert alert-info mb-2">Silakan masuk untuk menawar lelang ini.</div>
@@ -164,6 +179,7 @@
         </div>
     </div>
 </section>
+@if (in_array($auction->status, ['AKTIF', 'TERJADWAL'], true))
 <script>
     const countdown = document.getElementById('auction-countdown');
     const price = document.getElementById('harga-tertinggi');
@@ -259,4 +275,5 @@
     }, 1000);
     window.setInterval(refreshAuctionState, 3000);
 </script>
+@endif
 @endsection

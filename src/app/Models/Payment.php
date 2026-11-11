@@ -41,4 +41,9 @@ class Payment extends Model
     {
         return $this->belongsTo(AuctionDeposit::class, 'deposit_id', 'deposit_id');
     }
+
+    public function transaction(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class, 'transaction_id', 'transaction_id');
+    }
 }
