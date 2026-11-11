@@ -108,7 +108,10 @@ class AuctionController extends Controller
                     ->where('user_id', $request->user()->user_id)
                     ->first()
                 : null,
-            'initialSeconds' => max(0, (int) now()->diffInSeconds($auction->end_time, false)),
+            'initialSeconds' => max(0, (int) now()->diffInSeconds(
+                $auction->status === 'TERJADWAL' ? $auction->start_time : $auction->end_time,
+                false,
+            )),
         ]);
     }
 
@@ -118,6 +121,10 @@ class AuctionController extends Controller
         abort_unless(in_array($auction->status, ['AKTIF', 'TERJADWAL'], true) || $isSeller, 404);
 
         $now = now();
+        $status = $auction->status === 'TERJADWAL' && $auction->start_time->lte($now)
+            ? 'AKTIF'
+            : $auction->status;
+        $countdownTarget = $status === 'TERJADWAL' ? $auction->start_time : $auction->end_time;
         $highestBid = $this->highestValidBid($auction);
         $minimumAmount = $highestBid
             ? round((float) $highestBid->amount + (float) $auction->kelipatan_bid, 2)
@@ -125,11 +132,12 @@ class AuctionController extends Controller
 
         return response()->json([
             'end_time' => $auction->end_time->toIso8601String(),
-            'status' => $auction->status,
+            'start_time' => $auction->start_time->toIso8601String(),
+            'status' => $status,
             'harga_tertinggi' => (float) ($highestBid?->amount ?? $auction->harga_awal),
             'nominal_minimum' => $minimumAmount,
             'jumlah_bid' => $auction->bids()->where('status', 'VALID')->count(),
-            'sisa_detik' => max(0, (int) $now->diffInSeconds($auction->end_time, false)),
+            'sisa_detik' => max(0, (int) $now->diffInSeconds($countdownTarget, false)),
             'riwayat' => $this->recentValidBids($auction),
             'has_extended_bid' => $auction->bids()
                 ->where('status', 'VALID')

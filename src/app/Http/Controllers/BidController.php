@@ -25,13 +25,27 @@ class BidController extends Controller
                 ->firstOrFail();
             $now = now();
 
+            if ($lockedAuction->status === 'TERJADWAL' && $lockedAuction->start_time->gt($now)) {
+                return [
+                    'error' => 'Lelang belum dimulai. Penawaran dibuka pada '
+                        . $lockedAuction->start_time->format('d M Y H:i') . '.',
+                ];
+            }
+
             if ($lockedAuction->status === 'TERJADWAL' && $lockedAuction->start_time->lte($now)) {
                 $lockedAuction->status = 'AKTIF';
                 $lockedAuction->save();
             }
 
-            if ($lockedAuction->status !== 'AKTIF' || $now->gt($lockedAuction->end_time)) {
+            if (
+                ($lockedAuction->status === 'AKTIF' && $now->gt($lockedAuction->end_time))
+                || in_array($lockedAuction->status, ['SELESAI', 'TANPA_PEMENANG'], true)
+            ) {
                 return ['error' => 'Lelang telah berakhir.'];
+            }
+
+            if ($lockedAuction->status !== 'AKTIF') {
+                return ['error' => 'Lelang ini tidak dapat ditawar.'];
             }
 
             if ((string) $user->user_id === (string) $lockedAuction->seller_id) {
