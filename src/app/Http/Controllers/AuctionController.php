@@ -6,6 +6,7 @@ use App\Models\Auction;
 use App\Models\AuctionDeposit;
 use App\Models\Bid;
 use App\Models\Category;
+use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,12 +62,15 @@ class AuctionController extends Controller
             },
             'seller.personalProfile',
             'seller.businessProfile',
+            'winningBid',
         ]);
         $highestBid = $this->highestValidBid($auction);
 
         $isSeller = (string) $request->user()?->user_id === (string) $auction->seller_id;
+        $isWinner = $auction->winningBid !== null
+            && (string) $auction->winningBid->bidder_id === (string) $request->user()?->user_id;
         abort_unless(
-            in_array($auction->status, ['AKTIF', 'TERJADWAL'], true) || $isSeller,
+            in_array($auction->status, ['AKTIF', 'TERJADWAL', 'SELESAI', 'TANPA_PEMENANG'], true) || $isSeller,
             404,
         );
 
@@ -85,6 +89,10 @@ class AuctionController extends Controller
             'auction' => $auction,
             'sellerName' => $sellerName,
             'isSeller' => $isSeller,
+            'isWinner' => $isWinner,
+            'auctionTransaction' => $isSeller || $isWinner
+                ? Transaction::query()->where('auction_id', $auction->auction_id)->first()
+                : null,
             'hargaTertinggi' => $highestBid?->amount ?? $auction->harga_awal,
             'nominalMinimum' => $highestBid
                 ? round((float) $highestBid->amount + (float) $auction->kelipatan_bid, 2)
