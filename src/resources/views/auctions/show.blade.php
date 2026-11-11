@@ -68,10 +68,12 @@
                         </div>
                     </div>
 
-                    <div class="alert alert-info">
-                        <span class="fw-semibold">Sisa waktu:</span>
-                        <span id="auction-countdown" data-seconds="{{ $initialSeconds }}">{{ $initialSeconds }} detik</span>
-                    </div>
+                    @if (in_array($auction->status, ['AKTIF', 'TERJADWAL'], true))
+                        <div class="alert alert-info">
+                            <span class="fw-semibold" id="auction-countdown-label">{{ $auction->status === 'TERJADWAL' ? 'Dimulai dalam:' : 'Berakhir dalam:' }}</span>
+                            <span id="auction-countdown" data-seconds="{{ $initialSeconds }}" data-status="{{ $auction->status }}">{{ $initialSeconds }} detik</span>
+                        </div>
+                    @endif
 
                     @if ($errors->has('auction') || $errors->has('status_verifikasi'))
                         <div class="alert alert-danger py-2">
@@ -82,10 +84,14 @@
                         <div class="alert alert-success py-2">{{ session('success') }}</div>
                     @endif
 
-                    @if (in_array($auction->status, ['SELESAI', 'TANPA_PEMENANG'], true))
+                    @if ($auction->status === 'TERJADWAL')
+                        <div class="alert alert-info mb-4">Lelang dimulai pada {{ $auction->start_time->format('d M Y H:i') }}.</div>
+                    @elseif (in_array($auction->status, ['SELESAI', 'TANPA_PEMENANG'], true))
                         @if ($isSeller && $auction->status === 'TANPA_PEMENANG')
                             <a href="{{ route('auctions.index') }}" class="btn btn-outline-secondary w-100 mb-4">Kembali ke katalog</a>
                         @endif
+                    @elseif ($auction->status !== 'AKTIF')
+                        <div class="alert alert-secondary mb-4">Lelang ini tidak dapat ditawar.</div>
                     @elseif ($isSeller)
                         <div class="alert alert-secondary mb-4">Anda adalah penjual dan tidak dapat menawar lelang ini.</div>
                     @elseif (auth()->guest())
@@ -182,6 +188,7 @@
 @if (in_array($auction->status, ['AKTIF', 'TERJADWAL'], true))
 <script>
     const countdown = document.getElementById('auction-countdown');
+    const countdownLabel = document.getElementById('auction-countdown-label');
     const price = document.getElementById('harga-tertinggi');
     const minimum = document.getElementById('nominal-minimum');
     const bidInput = document.getElementById('amount');
@@ -194,10 +201,11 @@
         maximumFractionDigits: 0,
     });
     let remainingSeconds = Number(countdown.dataset.seconds);
+    let auctionStatus = countdown.dataset.status;
 
     function renderCountdown() {
         if (remainingSeconds <= 0) {
-            countdown.textContent = 'Berakhir';
+            countdown.textContent = auctionStatus === 'TERJADWAL' ? 'Dimulai' : 'Berakhir';
             return;
         }
 
@@ -207,6 +215,7 @@
         const seconds = remainingSeconds % 60;
         const time = [hours, minutes, seconds].map((part) => String(part).padStart(2, '0')).join(':');
 
+        countdownLabel.textContent = auctionStatus === 'TERJADWAL' ? 'Dimulai dalam:' : 'Berakhir dalam:';
         countdown.textContent = days > 0 ? `${days} hari ${time}` : time;
     }
 
@@ -220,6 +229,9 @@
             }
 
             const state = await response.json();
+            auctionStatus = state.status;
+            countdown.dataset.status = auctionStatus;
+            countdownLabel.textContent = auctionStatus === 'TERJADWAL' ? 'Dimulai dalam:' : 'Berakhir dalam:';
             remainingSeconds = Math.max(0, Number(state.sisa_detik));
             price.textContent = formatCurrency.format(Number(state.harga_tertinggi));
             minimum.textContent = formatCurrency.format(Number(state.nominal_minimum));
