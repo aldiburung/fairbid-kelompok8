@@ -5,6 +5,7 @@ use App\Http\Controllers\AuctionController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\BidController;
 use App\Http\Controllers\DepositController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TransactionController;
 use App\Models\Auction;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,11 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->name('logout');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/notifikasi', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifikasi/{notification}/baca', [NotificationController::class, 'markRead'])
+        ->name('notifications.read');
+    Route::post('/notifikasi/baca-semua', [NotificationController::class, 'markAllRead'])
+        ->name('notifications.read-all');
     Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
     Route::post('/auctions', [AuctionController::class, 'store'])->name('auctions.store');
     Route::post('/auctions/{auction}/bids', [BidController::class, 'store'])->name('bids.store');
