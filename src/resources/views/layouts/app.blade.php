@@ -85,6 +85,15 @@
                         @endphp
                         <a class="nav-link" href="{{ route('auctions.create') }}">Jual</a>
                         <a class="nav-link" href="{{ route('transactions.index') }}">Transaksi</a>
+                        @php
+                            $unreadNotifications = $user->notifications()->where('is_read', false)->count();
+                        @endphp
+                        <a class="nav-link" href="{{ route('notifications.index') }}">
+                            Notifikasi
+                            @if ($unreadNotifications > 0)
+                                <span class="badge rounded-pill bg-warning text-dark">{{ $unreadNotifications }}</span>
+                            @endif
+                        </a>
                         @if ($user->peran === 'ADMIN')
                             <a class="nav-link" href="{{ route('admin.verifikasi.index') }}">Admin</a>
                         @endif

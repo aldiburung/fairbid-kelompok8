@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Verification;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,10 @@ class AdminVerificationController extends Controller
         return view('admin.verifikasi', compact('verifications'));
     }
 
-    public function approve(Verification $verification): RedirectResponse
+    public function approve(
+        Verification $verification,
+        NotificationService $notificationService,
+    ): RedirectResponse
     {
         DB::transaction(function () use ($verification): void {
             $verification->update([
@@ -34,11 +38,21 @@ class AdminVerificationController extends Controller
             ]);
         });
 
+        $notificationService->send(
+            (int) $verification->user_id,
+            'VERIFIKASI',
+            'Verifikasi disetujui.',
+        );
+
         return redirect()->route('admin.verifikasi.index')
             ->with('success', 'Verifikasi disetujui.');
     }
 
-    public function reject(Request $request, Verification $verification): RedirectResponse
+    public function reject(
+        Request $request,
+        Verification $verification,
+        NotificationService $notificationService,
+    ): RedirectResponse
     {
         $validated = $request->validate([
             'alasan_penolakan' => ['required', 'string'],
@@ -56,6 +70,12 @@ class AdminVerificationController extends Controller
                 'status_verifikasi' => 'DITOLAK',
             ]);
         });
+
+        $notificationService->send(
+            (int) $verification->user_id,
+            'VERIFIKASI',
+            'Verifikasi ditolak: ' . $validated['alasan_penolakan'] . '.',
+        );
 
         return redirect()->route('admin.verifikasi.index')
             ->with('success', 'Verifikasi ditolak.');

@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Auction;
 use App\Models\AuctionDeposit;
 use App\Models\Bid;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BidController extends Controller
 {
-    public function store(Request $request, Auction $auction): RedirectResponse
+    public function store(
+        Request $request,
+        Auction $auction,
+        NotificationService $notificationService,
+    ): RedirectResponse
     {
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
@@ -103,11 +108,27 @@ class BidController extends Controller
                 'extended_auction' => $isExtended,
             ]);
 
-            return ['error' => null];
+            return [
+                'error' => null,
+                'outbid_user_id' => $highestBid
+                    && (string) $highestBid->bidder_id !== (string) $user->user_id
+                        ? (int) $highestBid->bidder_id
+                        : null,
+            ];
         });
 
         if ($result['error'] !== null) {
             return back()->withErrors(['amount' => $result['error']])->withInput();
+        }
+
+        if ($result['outbid_user_id'] !== null) {
+            $notificationService->send(
+                $result['outbid_user_id'],
+                'TERSALIP',
+                'Penawaran Anda pada ' . $auction->judul . ' tersalip. Penawaran tertinggi saat ini Rp '
+                    . number_format((float) $validated['amount'], 0, ',', '.') . '.',
+                (int) $auction->auction_id,
+            );
         }
 
         return back()->with('success', 'Penawaran Anda diterima.');

@@ -13,6 +13,10 @@ use RuntimeException;
 
 class SettlementService
 {
+    public function __construct(private NotificationService $notificationService)
+    {
+    }
+
     public function closeAuction(Auction $a): void
     {
         DB::transaction(function () use ($a): void {
@@ -56,6 +60,31 @@ class SettlementService
                 ]);
 
                 $this->refundHeldDeposits($auction, $winningBid->bidder_id, $transaction);
+                $this->notificationService->send(
+                    (int) $winningBid->bidder_id,
+                    'HASIL_LELANG',
+                    'Selamat! Anda memenangkan lelang ' . $auction->judul . '. Lunasi dalam 24 jam.',
+                    (int) $auction->auction_id,
+                );
+                $this->notificationService->send(
+                    (int) $auction->seller_id,
+                    'HASIL_LELANG',
+                    'Lelang ' . $auction->judul . ' selesai dengan harga akhir Rp '
+                        . number_format($hargaAkhir, 0, ',', '.') . '.',
+                    (int) $auction->auction_id,
+                );
+
+                AuctionDeposit::query()
+                    ->where('auction_id', $auction->auction_id)
+                    ->where('user_id', '!=', $winningBid->bidder_id)
+                    ->distinct()
+                    ->pluck('user_id')
+                    ->each(fn ($userId) => $this->notificationService->send(
+                        (int) $userId,
+                        'HASIL_LELANG',
+                        'Lelang ' . $auction->judul . ' telah berakhir. UJL Anda dikembalikan.',
+                        (int) $auction->auction_id,
+                    ));
 
                 return;
             }
@@ -65,6 +94,18 @@ class SettlementService
             $auction->save();
 
             $this->refundHeldDeposits($auction, null, null);
+            AuctionDeposit::query()
+                ->where('auction_id', $auction->auction_id)
+                ->distinct()
+                ->pluck('user_id')
+                ->push($auction->seller_id)
+                ->unique()
+                ->each(fn ($userId) => $this->notificationService->send(
+                    (int) $userId,
+                    'HASIL_LELANG',
+                    'Lelang ' . $auction->judul . ' berakhir tanpa pemenang.',
+                    (int) $auction->auction_id,
+                ));
         });
     }
 
@@ -98,6 +139,12 @@ class SettlementService
                 $transaction->buyer_id,
                 'POTONG_UJL',
                 (float) $deposit->nominal_ujl,
+            );
+            $this->notificationService->send(
+                (int) $transaction->buyer_id,
+                'HASIL_LELANG',
+                'Pelunasan melewati batas waktu. UJL dihanguskan.',
+                (int) $transaction->auction_id,
             );
         });
     }
@@ -139,6 +186,12 @@ class SettlementService
             ]);
             $transaction->status = 'ESCROW';
             $transaction->save();
+            $this->notificationService->send(
+                (int) $transaction->seller_id,
+                'HASIL_LELANG',
+                'Pelunasan diterima. Dana ditahan hingga barang dikonfirmasi.',
+                (int) $transaction->auction_id,
+            );
         });
     }
 
@@ -168,6 +221,12 @@ class SettlementService
                 $transaction->seller_id,
                 'PENCAIRAN',
                 (float) $transaction->net_seller,
+            );
+            $this->notificationService->send(
+                (int) $transaction->seller_id,
+                'HASIL_LELANG',
+                'Dana Rp ' . number_format((float) $transaction->net_seller, 0, ',', '.') . ' telah dicairkan.',
+                (int) $transaction->auction_id,
             );
         });
     }
