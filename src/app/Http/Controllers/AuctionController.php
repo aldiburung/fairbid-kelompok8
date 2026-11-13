@@ -7,6 +7,7 @@ use App\Models\AuctionDeposit;
 use App\Models\Bid;
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Services\AuctionCancellationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -70,7 +71,14 @@ class AuctionController extends Controller
         $isWinner = $auction->winningBid !== null
             && (string) $auction->winningBid->bidder_id === (string) $request->user()?->user_id;
         abort_unless(
-            in_array($auction->status, ['AKTIF', 'TERJADWAL', 'SELESAI', 'TANPA_PEMENANG'], true) || $isSeller,
+            in_array($auction->status, [
+                'AKTIF',
+                'TERJADWAL',
+                'SELESAI',
+                'TANPA_PEMENANG',
+                'DIBATALKAN',
+                'DITURUNKAN',
+            ], true) || $isSeller,
             404,
         );
 
@@ -101,6 +109,9 @@ class AuctionController extends Controller
             'hasExtendedBid' => $auction->bids()
                 ->where('status', 'VALID')
                 ->where('extended_auction', true)
+                ->exists(),
+            'hasValidBids' => $auction->bids()
+                ->where('status', 'VALID')
                 ->exists(),
             'userDeposit' => $request->user()
                 ? AuctionDeposit::query()
@@ -183,6 +194,39 @@ class AuctionController extends Controller
         return view('auctions.create', [
             'categories' => Category::orderBy('nama_kategori')->get(),
         ]);
+    }
+
+    public function cancel(
+        Request $request,
+        Auction $auction,
+        AuctionCancellationService $cancellationService,
+    ): RedirectResponse {
+        $result = DB::transaction(function () use ($request, $auction, $cancellationService): string {
+            $lockedAuction = Auction::query()
+                ->whereKey($auction->auction_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            abort_unless((string) $lockedAuction->seller_id === (string) $request->user()->user_id, 403);
+
+            if ($lockedAuction->bids()->where('status', 'VALID')->exists()) {
+                return 'bid_exists';
+            }
+
+            return $cancellationService->cancel($lockedAuction, 'DIBATALKAN')
+                ? 'cancelled'
+                : 'unavailable';
+        });
+
+        if ($result === 'bid_exists') {
+            return back()->withErrors(['auction' => 'Lelang tidak dapat dibatalkan karena sudah ada penawaran.']);
+        }
+
+        if ($result !== 'cancelled') {
+            return back()->withErrors(['auction' => 'Lelang ini tidak dapat dibatalkan.']);
+        }
+
+        return redirect()->route('auctions.show', $auction)->with('success', 'Lelang dibatalkan.');
     }
 
     public function store(Request $request): RedirectResponse

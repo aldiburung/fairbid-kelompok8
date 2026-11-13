@@ -29,7 +29,9 @@
                 <div class="card-body p-4 p-md-5">
                     <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
                         <span class="badge rounded-pill {{ $auction->model_transaksi === 'C2C' ? 'text-bg-primary' : 'text-bg-warning' }}">{{ $auction->model_transaksi }}</span>
-                        <span class="badge rounded-pill {{ $auction->status === 'AKTIF' ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $auction->status === 'AKTIF' ? 'Aktif' : ($auction->status === 'TERJADWAL' ? 'Terjadwal' : $auction->status) }}</span>
+                        <span class="badge rounded-pill {{ $auction->status === 'AKTIF' ? 'text-bg-success' : (in_array($auction->status, ['DIBATALKAN', 'DITURUNKAN'], true) ? 'text-bg-danger' : 'text-bg-secondary') }}">
+                            {{ $auction->status === 'AKTIF' ? 'Aktif' : ($auction->status === 'TERJADWAL' ? 'Terjadwal' : ($auction->status === 'DIBATALKAN' ? 'Dibatalkan' : ($auction->status === 'DITURUNKAN' ? 'Diturunkan oleh admin' : $auction->status))) }}
+                        </span>
                     </div>
                     <h1 class="h2 fw-bold text-fairbid mb-3">{{ $auction->judul }}</h1>
                     <p class="text-secondary mb-4">Penjual: <span class="fw-semibold text-dark">{{ $sellerName }}</span></p>
@@ -82,6 +84,18 @@
                     @endif
                     @if (session('success'))
                         <div class="alert alert-success py-2">{{ session('success') }}</div>
+                    @endif
+
+                    @if ($isSeller && in_array($auction->status, ['DRAFT', 'TERJADWAL', 'AKTIF'], true) && ! $hasValidBids)
+                        <form
+                            action="{{ route('auctions.cancel', $auction) }}"
+                            method="POST"
+                            class="mb-4"
+                            onsubmit="return confirm('Batalkan lelang ini?')"
+                        >
+                            @csrf
+                            <button type="submit" class="btn btn-outline-danger w-100">Batalkan lelang</button>
+                        </form>
                     @endif
 
                     @if ($auction->status === 'TERJADWAL')
