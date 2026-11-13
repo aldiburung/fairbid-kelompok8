@@ -95,6 +95,7 @@
                             @endif
                         </a>
                         @if ($user->peran === 'ADMIN')
+                            <a class="nav-link" href="{{ route('admin.lelang.index') }}">Moderasi Lelang</a>
                             <a class="nav-link" href="{{ route('admin.verifikasi.index') }}">Admin</a>
                         @endif
                         <span class="navbar-text text-white">{{ $userName ?: $user->email }}</span>

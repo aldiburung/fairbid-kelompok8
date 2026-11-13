@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuctionController;
+use App\Http\Controllers\AdminAuctionController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\BidController;
 use App\Http\Controllers\DepositController;
@@ -45,6 +46,7 @@ Route::middleware('auth')->group(function () {
         ->name('notifications.read-all');
     Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
     Route::post('/auctions', [AuctionController::class, 'store'])->name('auctions.store');
+    Route::post('/auctions/{auction}/batal', [AuctionController::class, 'cancel'])->name('auctions.cancel');
     Route::post('/auctions/{auction}/bids', [BidController::class, 'store'])->name('bids.store');
     Route::post('/auctions/{auction}/join', [DepositController::class, 'join'])->name('deposits.join');
     Route::get('/deposits/{deposit}/bayar', [DepositController::class, 'pay'])->name('deposits.pay');
@@ -62,6 +64,8 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/lelang', [AdminAuctionController::class, 'index'])->name('lelang.index');
+    Route::post('/lelang/{auction}/turunkan', [AdminAuctionController::class, 'turunkan'])->name('lelang.turunkan');
     Route::get('/verifikasi', [AdminVerificationController::class, 'index'])
         ->name('verifikasi.index');
     Route::post('/verifikasi/{verification}/setujui', [AdminVerificationController::class, 'approve'])
