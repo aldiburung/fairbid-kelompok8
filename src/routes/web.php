@@ -1,9 +1,10 @@
 <?php
 
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\AuctionController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminAuctionController;
 use App\Http\Controllers\AdminVerificationController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AuctionController;
 use App\Http\Controllers\BidController;
 use App\Http\Controllers\DepositController;
 use App\Http\Controllers\NotificationController;
@@ -39,6 +40,7 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->name('logout');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/akun/lelang-saya', [AccountController::class, 'lelangSaya'])->name('account.lelang-saya');
     Route::get('/notifikasi', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifikasi/{notification}/baca', [NotificationController::class, 'markRead'])
         ->name('notifications.read');

@@ -6,10 +6,6 @@
 <section class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-9">
-            @if (session('payment_error'))
-                <div class="alert alert-danger" role="alert">{{ session('payment_error') }}</div>
-            @endif
-
             <div class="mb-4">
                 <p class="text-uppercase small fw-semibold text-secondary mb-1">Pembayaran simulasi sandbox</p>
                 <h1 class="h2 fw-bold text-fairbid mb-0">Selesaikan UJL</h1>

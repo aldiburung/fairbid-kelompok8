@@ -84,6 +84,7 @@
                                 : $user->businessProfile?->nama_usaha;
                         @endphp
                         <a class="nav-link" href="{{ route('auctions.create') }}">Jual</a>
+                        <a class="nav-link" href="{{ route('account.lelang-saya') }}">Lelang Saya</a>
                         <a class="nav-link" href="{{ route('transactions.index') }}">Transaksi</a>
                         @php
                             $unreadNotifications = $user->notifications()->where('is_read', false)->count();
@@ -113,10 +114,49 @@
     </nav>
 
     <main>
+        @auth
+            @if ($user->peran !== 'ADMIN' && $user->status_verifikasi !== 'DISETUJUI')
+                @php
+                    $latestVerification = \App\Models\Verification::query()
+                        ->where('user_id', $user->user_id)
+                        ->orderByDesc('submitted_at')
+                        ->orderByDesc('verification_id')
+                        ->first();
+                @endphp
+                <div class="container pt-4">
+                    @if ($user->status_verifikasi === 'DITOLAK')
+                        <div class="alert alert-danger mb-0" role="alert">
+                            Verifikasi akun ditolak:
+                            {{ $latestVerification?->alasan_penolakan ?: 'Verifikasi akun Anda ditolak.' }}
+                        </div>
+                    @else
+                        <div class="alert alert-warning mb-0" role="status">
+                            Akun Anda sedang menunggu verifikasi administrator.
+                        </div>
+                    @endif
+                </div>
+            @endif
+        @endauth
         @if (session('success'))
             <div class="container pt-4">
                 <div class="alert alert-success alert-dismissible fade show mb-0" role="alert">
                     {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+                </div>
+            </div>
+        @endif
+        @if (session('error'))
+            <div class="container pt-4">
+                <div class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+                </div>
+            </div>
+        @endif
+        @if (session('payment_error'))
+            <div class="container pt-4">
+                <div class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
+                    {{ session('payment_error') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
                 </div>
             </div>
