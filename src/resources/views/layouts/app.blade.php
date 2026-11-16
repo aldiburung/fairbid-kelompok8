@@ -84,6 +84,7 @@
                                 : $user->businessProfile?->nama_usaha;
                         @endphp
                         <a class="nav-link" href="{{ route('auctions.create') }}">Jual</a>
+                        <a class="nav-link" href="{{ route('account.profile') }}">Profil</a>
                         <a class="nav-link" href="{{ route('account.lelang-saya') }}">Lelang Saya</a>
                         <a class="nav-link" href="{{ route('transactions.index') }}">Transaksi</a>
                         @php
@@ -128,6 +129,7 @@
                         <div class="alert alert-danger mb-0" role="alert">
                             Verifikasi akun ditolak:
                             {{ $latestVerification?->alasan_penolakan ?: 'Verifikasi akun Anda ditolak.' }}
+                            <a class="alert-link ms-1" href="{{ route('account.verification.resubmit.form') }}">Ajukan ulang</a>
                         </div>
                     @else
                         <div class="alert alert-warning mb-0" role="status">

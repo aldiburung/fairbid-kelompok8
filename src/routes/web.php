@@ -8,6 +8,8 @@ use App\Http\Controllers\AuctionController;
 use App\Http\Controllers\BidController;
 use App\Http\Controllers\DepositController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TransactionController;
 use App\Models\Auction;
 use Illuminate\Support\Facades\Route;
@@ -33,6 +35,10 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
     Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+    Route::get('/lupa-sandi', [PasswordResetController::class, 'showRequest'])->name('password.request');
+    Route::post('/lupa-sandi', [PasswordResetController::class, 'sendLink'])->name('password.email');
+    Route::get('/reset-sandi/{token}', [PasswordResetController::class, 'showReset'])->name('password.reset');
+    Route::post('/reset-sandi', [PasswordResetController::class, 'reset'])->name('password.update');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
@@ -40,6 +46,10 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->name('logout');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/akun/profil', [ProfileController::class, 'show'])->name('account.profile');
+    Route::post('/akun/profil', [ProfileController::class, 'update'])->name('account.profile.update');
+    Route::get('/akun/verifikasi', [ProfileController::class, 'resubmitForm'])->name('account.verification.resubmit.form');
+    Route::post('/akun/verifikasi', [ProfileController::class, 'resubmit'])->name('account.verification.resubmit');
     Route::get('/akun/lelang-saya', [AccountController::class, 'lelangSaya'])->name('account.lelang-saya');
     Route::get('/notifikasi', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifikasi/{notification}/baca', [NotificationController::class, 'markRead'])

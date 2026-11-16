@@ -34,7 +34,7 @@
                         </div>
 
                         <div class="text-end mb-4">
-                            <a href="#" class="text-fairbid text-decoration-none">Lupa kata sandi?</a>
+                            <a href="{{ route('password.request') }}" class="text-fairbid text-decoration-none">Lupa kata sandi?</a>
                         </div>
 
                         <button type="submit" class="btn btn-fairbid w-100 fw-semibold">MASUK</button>
