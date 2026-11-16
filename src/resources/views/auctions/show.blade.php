@@ -18,7 +18,7 @@
                     </div>
                 @empty
                     <div class="col-12">
-                        <div class="d-flex align-items-center justify-content-center rounded-4 bg-white text-secondary" style="height: 320px;">Foto belum tersedia</div>
+                        <div class="d-flex align-items-center justify-content-center rounded-4 bg-light text-secondary" style="height: 320px;">Foto belum tersedia</div>
                     </div>
                 @endforelse
             </div>
@@ -82,10 +82,6 @@
                             {{ $errors->first('auction') ?: $errors->first('status_verifikasi') }}
                         </div>
                     @endif
-                    @if (session('success'))
-                        <div class="alert alert-success py-2">{{ session('success') }}</div>
-                    @endif
-
                     @if ($isSeller && in_array($auction->status, ['DRAFT', 'TERJADWAL', 'AKTIF'], true) && ! $hasValidBids)
                         <form
                             action="{{ route('auctions.cancel', $auction) }}"
