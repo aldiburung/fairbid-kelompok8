@@ -7,6 +7,7 @@ use App\Models\AuctionDeposit;
 use App\Models\Bid;
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Services\AuditLogService;
 use App\Services\AuctionCancellationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -200,8 +201,14 @@ class AuctionController extends Controller
         Request $request,
         Auction $auction,
         AuctionCancellationService $cancellationService,
+        AuditLogService $auditLogService,
     ): RedirectResponse {
-        $result = DB::transaction(function () use ($request, $auction, $cancellationService): string {
+        $result = DB::transaction(function () use (
+            $request,
+            $auction,
+            $cancellationService,
+            $auditLogService,
+        ): string {
             $lockedAuction = Auction::query()
                 ->whereKey($auction->auction_id)
                 ->lockForUpdate()
@@ -213,9 +220,21 @@ class AuctionController extends Controller
                 return 'bid_exists';
             }
 
-            return $cancellationService->cancel($lockedAuction, 'DIBATALKAN')
-                ? 'cancelled'
-                : 'unavailable';
+            $oldStatus = $lockedAuction->status;
+            if (! $cancellationService->cancel($lockedAuction, 'DIBATALKAN')) {
+                return 'unavailable';
+            }
+
+            $auditLogService->record(
+                (int) $request->user()->user_id,
+                'LELANG_DIBATALKAN',
+                'auction',
+                (int) $lockedAuction->auction_id,
+                ['status' => $oldStatus],
+                ['status' => 'DIBATALKAN'],
+            );
+
+            return 'cancelled';
         });
 
         if ($result === 'bid_exists') {
@@ -229,7 +248,7 @@ class AuctionController extends Controller
         return redirect()->route('auctions.show', $auction)->with('success', 'Lelang dibatalkan.');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AuditLogService $auditLogService): RedirectResponse
     {
         if ($request->user()->status_verifikasi !== 'DISETUJUI') {
             return back()
@@ -294,7 +313,12 @@ class AuctionController extends Controller
         $storedPaths = [];
 
         try {
-            $auction = DB::transaction(function () use ($request, $validated, &$storedPaths): Auction {
+            $auction = DB::transaction(function () use (
+                $request,
+                $validated,
+                &$storedPaths,
+                $auditLogService,
+            ): Auction {
                 $startTime = isset($validated['start_time'])
                     ? Carbon::parse($validated['start_time'])
                     : now();
@@ -330,6 +354,18 @@ class AuctionController extends Controller
                         'urutan' => $index + 1,
                     ]);
                 }
+
+                $auditLogService->record(
+                    (int) $request->user()->user_id,
+                    'LELANG_DIBUAT',
+                    'auction',
+                    (int) $auction->auction_id,
+                    null,
+                    [
+                        'judul' => $auction->judul,
+                        'status' => $auction->status,
+                    ],
+                );
 
                 return $auction;
             });

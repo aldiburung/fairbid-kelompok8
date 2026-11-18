@@ -99,6 +99,7 @@
                         @if ($user->peran === 'ADMIN')
                             <a class="nav-link" href="{{ route('admin.lelang.index') }}">Moderasi Lelang</a>
                             <a class="nav-link" href="{{ route('admin.verifikasi.index') }}">Admin</a>
+                            <a class="nav-link" href="{{ route('admin.audit-log.index') }}">Audit Log</a>
                         @endif
                         <span class="navbar-text text-white">{{ $userName ?: $user->email }}</span>
                         <form action="{{ route('logout') }}" method="POST" class="ms-lg-2">

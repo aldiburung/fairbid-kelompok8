@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AdminAuditController;
 use App\Http\Controllers\AdminAuctionController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\AuthController;
@@ -33,7 +34,9 @@ Route::get('/register', [AuthController::class, 'showRegister'])->name('register
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 
 Route::middleware('guest')->group(function () {
-    Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
+    Route::post('/register', [AuthController::class, 'register'])
+        ->middleware('throttle:6,1')
+        ->name('register.submit');
     Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
     Route::get('/lupa-sandi', [PasswordResetController::class, 'showRequest'])->name('password.request');
     Route::post('/lupa-sandi', [PasswordResetController::class, 'sendLink'])->name('password.email');
@@ -59,7 +62,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
     Route::post('/auctions', [AuctionController::class, 'store'])->name('auctions.store');
     Route::post('/auctions/{auction}/batal', [AuctionController::class, 'cancel'])->name('auctions.cancel');
-    Route::post('/auctions/{auction}/bids', [BidController::class, 'store'])->name('bids.store');
+    Route::post('/auctions/{auction}/bids', [BidController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('bids.store');
     Route::post('/auctions/{auction}/join', [DepositController::class, 'join'])->name('deposits.join');
     Route::get('/deposits/{deposit}/bayar', [DepositController::class, 'pay'])->name('deposits.pay');
     Route::post('/sandbox/payments/{payment}/simulasi', [DepositController::class, 'simulasi'])
@@ -76,6 +81,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/audit-log', [AdminAuditController::class, 'index'])->name('audit-log.index');
     Route::get('/lelang', [AdminAuctionController::class, 'index'])->name('lelang.index');
     Route::post('/lelang/{auction}/turunkan', [AdminAuctionController::class, 'turunkan'])->name('lelang.turunkan');
     Route::get('/verifikasi', [AdminVerificationController::class, 'index'])

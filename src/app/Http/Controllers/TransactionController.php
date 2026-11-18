@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuctionDeposit;
 use App\Models\Payment;
 use App\Models\Transaction;
+use App\Services\AuditLogService;
 use App\Services\SettlementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,11 +52,15 @@ class TransactionController extends Controller
         ]);
     }
 
-    public function pay(Request $request, Transaction $transaction): RedirectResponse
+    public function pay(
+        Request $request,
+        Transaction $transaction,
+        AuditLogService $auditLogService,
+    ): RedirectResponse
     {
         abort_unless((string) $transaction->buyer_id === (string) $request->user()->user_id, 403);
 
-        $payment = DB::transaction(function () use ($request, $transaction): Payment {
+        $payment = DB::transaction(function () use ($request, $transaction, $auditLogService): Payment {
             $lockedTransaction = Transaction::query()
                 ->whereKey($transaction->transaction_id)
                 ->lockForUpdate()
@@ -89,7 +94,7 @@ class TransactionController extends Controller
                 2,
             );
 
-            return Payment::query()->create([
+            $payment = Payment::query()->create([
                 'user_id' => $request->user()->user_id,
                 'deposit_id' => $deposit->deposit_id,
                 'transaction_id' => $lockedTransaction->transaction_id,
@@ -99,6 +104,17 @@ class TransactionController extends Controller
                 'idempotency_key' => (string) Str::uuid(),
                 'status' => 'PENDING',
             ]);
+
+            $auditLogService->record(
+                (int) $request->user()->user_id,
+                'PELUNASAN_DIMULAI',
+                'transaction',
+                (int) $lockedTransaction->transaction_id,
+                ['status_pembayaran' => null],
+                ['status_pembayaran' => $payment->status],
+            );
+
+            return $payment;
         });
 
         return redirect()
@@ -164,11 +180,15 @@ class TransactionController extends Controller
             );
     }
 
-    public function confirmHandover(Request $request, Transaction $transaction): RedirectResponse
+    public function confirmHandover(
+        Request $request,
+        Transaction $transaction,
+        AuditLogService $auditLogService,
+    ): RedirectResponse
     {
         abort_unless((string) $transaction->seller_id === (string) $request->user()->user_id, 403);
 
-        DB::transaction(function () use ($transaction): void {
+        DB::transaction(function () use ($request, $transaction, $auditLogService): void {
             $lockedTransaction = Transaction::query()
                 ->whereKey($transaction->transaction_id)
                 ->lockForUpdate()
@@ -180,6 +200,15 @@ class TransactionController extends Controller
                 $lockedTransaction->seller_confirmed_at = $now;
                 $lockedTransaction->batas_konfirmasi = $now->copy()->addDays(3);
                 $lockedTransaction->save();
+
+                $auditLogService->record(
+                    (int) $request->user()->user_id,
+                    'SERAH_TERIMA_PENJUAL',
+                    'transaction',
+                    (int) $lockedTransaction->transaction_id,
+                    ['seller_confirmed_at' => null],
+                    ['seller_confirmed_at' => $now->toIso8601String()],
+                );
             }
         });
 
@@ -190,10 +219,11 @@ class TransactionController extends Controller
         Request $request,
         Transaction $transaction,
         SettlementService $settlementService,
+        AuditLogService $auditLogService,
     ): RedirectResponse {
         abort_unless((string) $transaction->buyer_id === (string) $request->user()->user_id, 403);
 
-        DB::transaction(function () use ($transaction): void {
+        DB::transaction(function () use ($request, $transaction, $auditLogService): void {
             $lockedTransaction = Transaction::query()
                 ->whereKey($transaction->transaction_id)
                 ->lockForUpdate()
@@ -205,8 +235,24 @@ class TransactionController extends Controller
             );
 
             if ($lockedTransaction->buyer_confirmed_at === null) {
-                $lockedTransaction->buyer_confirmed_at = now();
+                $now = now();
+                $lockedTransaction->buyer_confirmed_at = $now;
                 $lockedTransaction->save();
+
+                $auditLogService->record(
+                    (int) $request->user()->user_id,
+                    'BARANG_DITERIMA',
+                    'transaction',
+                    (int) $lockedTransaction->transaction_id,
+                    [
+                        'status' => $lockedTransaction->status,
+                        'buyer_confirmed_at' => null,
+                    ],
+                    [
+                        'status' => $lockedTransaction->status,
+                        'buyer_confirmed_at' => $now->toIso8601String(),
+                    ],
+                );
             }
         });
 

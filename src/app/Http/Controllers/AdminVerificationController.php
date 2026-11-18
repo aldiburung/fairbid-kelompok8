@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Verification;
+use App\Services\AuditLogService;
 use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,11 +23,14 @@ class AdminVerificationController extends Controller
     }
 
     public function approve(
+        Request $request,
         Verification $verification,
         NotificationService $notificationService,
+        AuditLogService $auditLogService,
     ): RedirectResponse
     {
-        DB::transaction(function () use ($verification): void {
+        DB::transaction(function () use ($request, $verification, $auditLogService): void {
+            $oldStatus = $verification->status;
             $verification->update([
                 'status' => 'DISETUJUI',
                 'reviewed_by' => auth()->id(),
@@ -36,6 +40,15 @@ class AdminVerificationController extends Controller
             $verification->user()->update([
                 'status_verifikasi' => 'DISETUJUI',
             ]);
+
+            $auditLogService->record(
+                (int) $request->user()->user_id,
+                'VERIFIKASI_DISETUJUI',
+                'verification',
+                (int) $verification->verification_id,
+                ['status' => $oldStatus],
+                ['status' => 'DISETUJUI'],
+            );
         });
 
         $notificationService->send(
@@ -52,13 +65,15 @@ class AdminVerificationController extends Controller
         Request $request,
         Verification $verification,
         NotificationService $notificationService,
+        AuditLogService $auditLogService,
     ): RedirectResponse
     {
         $validated = $request->validate([
             'alasan_penolakan' => ['required', 'string'],
         ]);
 
-        DB::transaction(function () use ($verification, $validated): void {
+        DB::transaction(function () use ($request, $verification, $validated, $auditLogService): void {
+            $oldStatus = $verification->status;
             $verification->update([
                 'status' => 'DITOLAK',
                 'alasan_penolakan' => $validated['alasan_penolakan'],
@@ -69,6 +84,15 @@ class AdminVerificationController extends Controller
             $verification->user()->update([
                 'status_verifikasi' => 'DITOLAK',
             ]);
+
+            $auditLogService->record(
+                (int) $request->user()->user_id,
+                'VERIFIKASI_DITOLAK',
+                'verification',
+                (int) $verification->verification_id,
+                ['status' => $oldStatus],
+                ['status' => 'DITOLAK'],
+            );
         });
 
         $notificationService->send(
