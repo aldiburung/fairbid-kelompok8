@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Auction;
 use App\Models\AuctionModeration;
+use App\Services\AuditLogService;
 use App\Services\AuctionCancellationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,16 +31,24 @@ class AdminAuctionController extends Controller
         Request $request,
         Auction $auction,
         AuctionCancellationService $cancellationService,
+        AuditLogService $auditLogService,
     ): RedirectResponse {
         $validated = $request->validate([
             'alasan' => ['required', 'string'],
         ]);
 
-        $diturunkan = DB::transaction(function () use ($auction, $cancellationService, $request, $validated): bool {
+        $diturunkan = DB::transaction(function () use (
+            $auction,
+            $cancellationService,
+            $request,
+            $validated,
+            $auditLogService,
+        ): bool {
             $lockedAuction = Auction::query()
                 ->whereKey($auction->auction_id)
                 ->lockForUpdate()
                 ->firstOrFail();
+            $oldStatus = $lockedAuction->status;
 
             if (! $cancellationService->cancel($lockedAuction, 'DITURUNKAN', $validated['alasan'])) {
                 return false;
@@ -51,6 +60,15 @@ class AdminAuctionController extends Controller
                 'aksi' => 'TURUNKAN',
                 'alasan' => $validated['alasan'],
             ]);
+
+            $auditLogService->record(
+                (int) $request->user()->user_id,
+                'LELANG_DITURUNKAN',
+                'auction',
+                (int) $lockedAuction->auction_id,
+                ['status' => $oldStatus],
+                ['status' => 'DITURUNKAN'],
+            );
 
             return true;
         });

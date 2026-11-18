@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use RuntimeException;
@@ -21,7 +24,7 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-    public function register(Request $request): RedirectResponse
+    public function register(Request $request, AuditLogService $auditLogService): RedirectResponse
     {
         $validated = $request->validate([
             'tipe_akun' => ['required', Rule::in(['PERSONAL', 'BISNIS'])],
@@ -78,7 +81,7 @@ class AuthController extends Controller
         $filePath = null;
 
         try {
-            $user = DB::transaction(function () use ($request, $validated, &$filePath): User {
+            $user = DB::transaction(function () use ($request, $validated, &$filePath, $auditLogService): User {
                 $user = User::create([
                     'email' => $validated['email'],
                     'password_hash' => Hash::make($validated['password']),
@@ -122,6 +125,19 @@ class AuthController extends Controller
                     'submitted_at' => now(),
                 ]);
 
+                $auditLogService->record(
+                    (int) $user->user_id,
+                    'REGISTRASI',
+                    'user',
+                    (int) $user->user_id,
+                    null,
+                    [
+                        'tipe_akun' => $user->tipe_akun,
+                        'status_verifikasi' => $user->status_verifikasi,
+                        'status_akun' => $user->status_akun,
+                    ],
+                );
+
                 return $user;
             });
         } catch (Throwable $exception) {
@@ -155,11 +171,27 @@ class AuthController extends Controller
             'password.required' => 'Kata sandi wajib diisi.',
         ]);
 
+        $limiterKey = Str::transliterate(Str::lower($credentials['email']) . '|' . $request->ip());
+
+        if (RateLimiter::tooManyAttempts($limiterKey, 5)) {
+            $seconds = RateLimiter::availableIn($limiterKey);
+
+            return back()
+                ->withErrors([
+                    'email' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
+                ])
+                ->onlyInput('email');
+        }
+
         if (! Auth::attempt($credentials)) {
+            RateLimiter::hit($limiterKey, 60);
+
             return back()
                 ->withErrors(['email' => 'Email atau kata sandi salah.'])
                 ->onlyInput('email');
         }
+
+        RateLimiter::clear($limiterKey);
 
         if (Auth::user()->status_akun !== 'AKTIF') {
             Auth::logout();
