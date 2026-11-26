@@ -26,37 +26,38 @@
                 <div class="card-body p-4 p-md-5">
                     <h2 class="h5 fw-bold text-fairbid mb-4">Rincian pembayaran</h2>
                     <div class="d-flex justify-content-between gap-3 mb-3">
-                        <span class="text-secondary">Harga akhir</span>
-                        <span class="fw-semibold">Rp{{ number_format((float) $transaction->harga_akhir, 2, ',', '.') }}</span>
+                        <span class="text-secondary">Harga akhir lelang</span>
+                        <span class="fw-semibold">Rp{{ number_format((float) $transaction->harga_akhir, 0, ',', '.') }}</span>
                     </div>
-                    <div class="d-flex justify-content-between gap-3 mb-3">
-                        <span class="text-secondary">UJL yang diperhitungkan</span>
-                        <span>Rp{{ number_format((float) $deposit->nominal_ujl, 2, ',', '.') }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between gap-3 mb-3">
-                        <span class="text-secondary">Sisa pelunasan</span>
-                        <span class="fw-semibold">Rp{{ number_format($sisaBayar, 2, ',', '.') }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between gap-3 mb-3">
-                        <span class="text-secondary">Success fee ({{ number_format((float) $transaction->fee_persen, 2, ',', '.') }}%)</span>
-                        <span>Rp{{ number_format((float) $transaction->fee_amount, 2, ',', '.') }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between gap-3 mb-4">
-                        <span class="text-secondary">Dana bersih penjual</span>
-                        <span class="fw-semibold">Rp{{ number_format((float) $transaction->net_seller, 2, ',', '.') }}</span>
-                    </div>
-                    <div class="border-top pt-3">
+                    @if ($isBuyer)
                         <div class="d-flex justify-content-between gap-3">
-                            <span class="text-secondary">Batas pelunasan</span>
-                            <span>{{ $transaction->batas_pelunasan->format('d M Y H:i') }}</span>
+                            <span class="text-secondary">Dikurangi UJL yang sudah Anda bayar</span>
+                            <span class="text-secondary">-Rp{{ number_format((float) $deposit->nominal_ujl, 0, ',', '.') }}</span>
                         </div>
-                        @if ($transaction->batas_konfirmasi)
-                            <div class="d-flex justify-content-between gap-3 mt-2">
-                                <span class="text-secondary">Batas konfirmasi penerimaan</span>
-                                <span>{{ $transaction->batas_konfirmasi->format('d M Y H:i') }}</span>
+                        <div class="border-top mt-3 pt-3">
+                            <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                                <span class="text-secondary">Yang harus dibayar sekarang</span>
+                                <span class="fs-4 fw-bold">Rp{{ number_format($sisaBayar, 0, ',', '.') }}</span>
                             </div>
-                        @endif
-                    </div>
+                            <div class="d-flex justify-content-between gap-3">
+                                <span class="text-secondary">Batas pembayaran</span>
+                                <span>{{ $transaction->batas_pelunasan->format('d M Y H:i') }}</span>
+                            </div>
+                        </div>
+                        <p class="text-secondary small mb-0 mt-3">UJL Anda sudah dihitung sebagai bagian dari pembayaran.</p>
+                    @elseif ($isSeller)
+                        <div class="d-flex justify-content-between gap-3">
+                            <span class="text-secondary">Biaya layanan FairBid ({{ number_format((float) $transaction->fee_persen, 2, ',', '.') }}%)</span>
+                            <span class="text-secondary">-Rp{{ number_format((float) $transaction->fee_amount, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="border-top mt-3 pt-3">
+                            <div class="d-flex justify-content-between align-items-center gap-3">
+                                <span class="text-secondary">Dana yang Anda terima</span>
+                                <span class="fs-4 fw-bold">Rp{{ number_format((float) $transaction->net_seller, 0, ',', '.') }}</span>
+                            </div>
+                        </div>
+                        <p class="text-secondary small mb-0 mt-3">Dana dicairkan setelah pembeli mengonfirmasi barang diterima, atau otomatis 3 hari setelah serah terima.</p>
+                    @endif
                 </div>
             </article>
 
