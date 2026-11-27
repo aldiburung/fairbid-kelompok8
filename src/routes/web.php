@@ -60,7 +60,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifikasi/baca-semua', [NotificationController::class, 'markAllRead'])
         ->name('notifications.read-all');
     Route::get('/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
+    Route::get('/auctions/{auction}/edit', [AuctionController::class, 'edit'])->name('auctions.edit');
     Route::post('/auctions', [AuctionController::class, 'store'])->name('auctions.store');
+    Route::put('/auctions/{auction}', [AuctionController::class, 'update'])->name('auctions.update');
+    Route::delete('/auctions/{auction}', [AuctionController::class, 'destroy'])->name('auctions.destroy');
     Route::post('/auctions/{auction}/batal', [AuctionController::class, 'cancel'])->name('auctions.cancel');
     Route::post('/auctions/{auction}/bids', [BidController::class, 'store'])
         ->middleware('throttle:30,1')

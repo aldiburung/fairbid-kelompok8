@@ -71,4 +71,30 @@ class Auction extends Model
     {
         return $this->belongsTo(Bid::class, 'winning_bid_id', 'bid_id');
     }
+
+    public function modePerubahan(): ?string
+    {
+        if ($this->status === 'DRAFT') {
+            return 'penuh';
+        }
+
+        if ($this->status === 'AKTIF') {
+            return 'terbatas';
+        }
+
+        if ($this->status !== 'TERJADWAL') {
+            return null;
+        }
+
+        if ($this->bids()->where('status', 'VALID')->exists() || $this->auctionDeposits()->exists()) {
+            return 'terbatas';
+        }
+
+        return 'penuh';
+    }
+
+    public function dapatDiubah(): bool
+    {
+        return $this->modePerubahan() !== null;
+    }
 }

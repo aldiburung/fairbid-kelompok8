@@ -9,6 +9,10 @@
         <h1 class="h2 text-fairbid fw-bold mb-0 mt-1">Lelang Saya</h1>
     </div>
 
+    @if (session('success'))
+        <div class="alert alert-success" role="status">{{ session('success') }}</div>
+    @endif
+
     <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item" role="presentation">
             <a
@@ -51,6 +55,9 @@
                                     <td>{{ $auction->jumlah_bid }}</td>
                                     <td class="text-end">
                                         <a href="{{ route('auctions.show', $auction) }}" class="btn btn-sm btn-outline-primary">Lihat lelang</a>
+                                        @if ($auction->dapatDiubah())
+                                            <a href="{{ route('auctions.edit', $auction) }}" class="btn btn-sm btn-outline-secondary">Ubah</a>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
