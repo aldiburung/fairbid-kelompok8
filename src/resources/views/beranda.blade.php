@@ -11,8 +11,8 @@
                 <h1 class="display-5 fw-bold lh-sm mb-3">Lelang online yang adil dan aman</h1>
                 <p class="lead text-white-50 mb-4">Temukan barang istimewa, ajukan penawaran dengan percaya diri, dan menangkan lelang dengan proses yang transparan.</p>
                 <div class="d-flex flex-column flex-sm-row gap-3">
-                    <a href="#lelang" class="btn btn-orange btn-lg fw-semibold px-4">Lihat Lelang</a>
-                    <a href="{{ route('register') }}" class="btn btn-outline-light btn-lg fw-semibold px-4">Mulai Jual</a>
+                    <a href="{{ route('auctions.index') }}" class="btn btn-orange btn-lg fw-semibold px-4">Lihat Lelang</a>
+                    <a href="{{ route('auctions.create') }}" class="btn btn-outline-light btn-lg fw-semibold px-4">Mulai Jual</a>
                 </div>
             </div>
             <div class="col-lg-5 d-none d-lg-block">

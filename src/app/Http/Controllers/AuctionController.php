@@ -190,8 +190,14 @@ class AuctionController extends Controller
             ->all();
     }
 
-    public function create(): View
+    public function create(Request $request): View|RedirectResponse
     {
+        if ($request->user()->status_verifikasi !== 'DISETUJUI') {
+            return redirect()->route('home')
+                ->with('error', 'Anda harus terverifikasi untuk membuat lelang.')
+                ->with('verification_link', route('account.verification.resubmit.form'));
+        }
+
         return view('auctions.create', [
             'categories' => Category::orderBy('nama_kategori')->get(),
         ]);
