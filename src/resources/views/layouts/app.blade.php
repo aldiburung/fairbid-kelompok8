@@ -107,6 +107,7 @@
                             <button type="submit" class="btn btn-outline-light">Keluar</button>
                         </form>
                     @else
+                        <a class="nav-link" href="{{ route('auctions.create') }}">Jual</a>
                         <a class="nav-link" href="{{ route('login') }}">Masuk</a>
                         <a class="btn btn-orange fw-semibold px-4 ms-lg-2" href="{{ route('register') }}">Daftar</a>
                     @endauth
@@ -152,6 +153,9 @@
             <div class="container pt-4">
                 <div class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
                     {{ session('error') }}
+                    @if (session('verification_link'))
+                        <a class="alert-link ms-1" href="{{ session('verification_link') }}">Verifikasi akun</a>
+                    @endif
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
                 </div>
             </div>

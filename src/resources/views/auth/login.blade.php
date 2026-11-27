@@ -13,6 +13,12 @@
                         <p class="text-secondary mb-0">Masuk ke akun FairBid Anda.</p>
                     </div>
 
+                    @if (session('url.intended'))
+                        <div class="alert alert-info" role="status">
+                            Silakan masuk untuk membuat lelang.
+                        </div>
+                    @endif
+
                     @if ($errors->any())
                         <div class="alert alert-danger" role="alert">
                             @foreach ($errors->all() as $error)
