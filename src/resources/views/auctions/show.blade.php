@@ -36,6 +36,13 @@
                     <h1 class="h2 fw-bold text-fairbid mb-3">{{ $auction->judul }}</h1>
                     <p class="text-secondary mb-4">Penjual: <span class="fw-semibold text-dark">{{ $sellerName }}</span></p>
 
+                    @if (session('success'))
+                        <div class="alert alert-success">{{ session('success') }}</div>
+                    @endif
+                    @if (session('error'))
+                        <div class="alert alert-danger">{{ session('error') }}</div>
+                    @endif
+
                     @if ($auction->status === 'SELESAI')
                         <div class="alert alert-success">
                             Lelang berakhir. Harga akhir Rp{{ number_format((float) $auction->winningBid?->amount, 0, ',', '.') }}.
@@ -92,6 +99,23 @@
                             @csrf
                             <button type="submit" class="btn btn-outline-danger w-100">Batalkan lelang</button>
                         </form>
+                    @endif
+                    @if ($isSeller && $auction->dapatDiubah())
+                        <div class="d-flex flex-column flex-sm-row gap-2 mb-4">
+                            <a href="{{ route('auctions.edit', $auction) }}" class="btn btn-outline-primary flex-fill">Ubah</a>
+                            @if ($auction->status === 'DRAFT')
+                                <form
+                                    action="{{ route('auctions.destroy', $auction) }}"
+                                    method="POST"
+                                    class="flex-fill"
+                                    onsubmit="return confirm('Hapus draf lelang ini?')"
+                                >
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-outline-danger w-100">Hapus draf</button>
+                                </form>
+                            @endif
+                        </div>
                     @endif
 
                     @if ($auction->status === 'TERJADWAL')
